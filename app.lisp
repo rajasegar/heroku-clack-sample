@@ -11,6 +11,7 @@
 (defparameter +movies.html+ (djula:compile-template* "movies.html"))
 (defparameter +new-movies.html+ (djula:compile-template* "new-movies.html"))
 (defparameter +theatres.html+ (djula:compile-template* "theatres.html"))
+(defparameter +404.html+ (djula:compile-template* "404.html"))
 
 ;; render template
 (defun render (template &optional data)
@@ -81,6 +82,9 @@
     ;; movies
     ((string= "/theatres" (getf env :request-uri))
      (render +theatres.html+))
+    ;; home
+    ((string= "/" (getf env :request-uri))
+     (render +index.html+))
     ;; default route
     (t
-     (render +index.html+))))
+     (render +404.html+))))
