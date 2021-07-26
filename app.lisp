@@ -1,45 +1,51 @@
 (ql:quickload '(:djula :mito :flexi-streams :quri))
 
 (djula:add-template-directory  #P"templates/")
+(defparameter *template-registry* (make-hash-table :test 'equal))
 
-(defparameter +index.html+ (djula:compile-template* "index.html"))
-
-(defparameter +about.html+ (djula:compile-template* "about.html"))
-
-(defparameter +contact.html+ (djula:compile-template* "contact.html"))
-
-(defparameter +movies.html+ (djula:compile-template* "movies.html"))
-(defparameter +new-movies.html+ (djula:compile-template* "new-movies.html"))
-(defparameter +theatres.html+ (djula:compile-template* "theatres.html"))
-(defparameter +404.html+ (djula:compile-template* "404.html"))
-
-;; render template
-(defun render (template &optional data)
-  (let ((html (make-string-output-stream)))
+;; render template - copied & modified from caveman
+(defun render (template-path &optional data)
+  (let ((html (make-string-output-stream))
+	(template (gethash template-path *template-registry*)))
+    (unless template
+      (setf template (djula:compile-template* (princ-to-string template-path)))
+      (setf (gethash template-path *template-registry*) template))
     (apply #'djula:render-template* template html data)
     `(200 (:content-type "text/html")
-          (,(format nil "~a" (get-output-stream-string html))))))
+	  (,(format nil "~a" (get-output-stream-string html))))))
 
 ;; utils
-(defun is-get (url env)
-  (and (string= url (getf env :request-uri)) (equal (getf env :request-method) :get)))
+(defun get-requestp (url env)
+  (and (string= url (getf env :path-info)) (equal (getf env :request-method) :get)))
 
-(defun is-post (url env)
-  (and (string= url (getf env :request-uri)) (equal (getf env :request-method) :post)))
+(defun post-requestp (url env)
+  (and (string= url (getf env :path-info)) (equal (getf env :request-method) :post)))
 
-(defun get-param (name body)
-  (cdr (assoc name body :test #'string=)))
+(defun get-parsed (env)
+  "Get parsed form-encoded values from :raw-body"
+  (let ((body (make-array (getf env :content-length) :element-type 'flexi-streams:octet)))
+    (read-sequence body (getf env :raw-body))
+    (quri:url-decode-params (flexi-streams:octets-to-string body :external-format :utf-8))))
 
+(defun get-param (name parsed)
+  "Get parameter values from parsed"
+  (cdr (assoc name parsed :test #'string=)))
+
+(defun get-query-param (name querystring)
+  "Get query param values from :query-string"
+  (cdr (assoc name (quri:url-decode-params querystring) :test #'string=)))
+
+;; db
 (mito:connect-toplevel :sqlite3 :database-name #P"movies.db")
 
 ;; mito tables
 (mito:deftable movie ()
   ((title :col-type (:varchar 50))
-  (rating :col-type :integer)))
+   (rating :col-type :integer)))
 
 (mito:deftable theatre ()
   ((name :col-type (:varchar 30))
-  (movie :col-type movie)))
+   (movie :col-type movie)))
 
 (mito:ensure-table-exists 'movie)
 (mito:ensure-table-exists 'theatre)
@@ -50,41 +56,68 @@
 ;; (mito:insert-dao (make-instance 'movie :title "Independence Day" :rating 8))
 ;; (mito:insert-dao (make-instance 'movie :title "Titanic" :rating 8))
 
-
 (lambda (env)
-  ;; (print env)
+  (print env)
   (cond
     ;; about page
-    ((string= "/about" (getf env :request-uri))
-     (render +about.html+))
+    ((get-requestp "/about" env)
+     (render #P"about.html"))
     ;; contact page
-    ((string= "/contact" (getf env :request-uri))
-     (render +contact.html+))
+    ((get-requestp "/contact" env)
+     (render #P"contact.html"))
     ;; movies
-    ((is-get "/movies" env)
-     (render +movies.html+ (list :movies (mito:select-dao 'movie))))
+    ((get-requestp "/movies" env)
+     (render #P"movies.html" (list :movies (mito:select-dao 'movie))))
+
     ;; POST movies
-    ((is-post "/movies" env)
-     (let ((body (make-array (getf env :content-length) :element-type 'flexi-streams:octet)))
-       (read-sequence body (getf env :raw-body))
-       (print (flexi-streams:octets-to-string body :external-format :utf-8))
-       (let* ((parsed (quri:url-decode-params (flexi-streams:octets-to-string body :external-format :utf-8)))
-              (title (get-param "title" parsed))
-              (rating (get-param "rating" parsed)))
-
-         (mito:insert-dao (make-instance 'movie :title title :rating rating))
-
-         (render +movies.html+ (list :movies (mito:select-dao 'movie))))))
+    ((post-requestp "/movies" env)
+     (let* ((parsed (get-parsed env))
+	    (title (get-param "title" parsed))
+	    (rating (get-param "rating" parsed)))
+       (print title)
+       (mito:insert-dao (make-instance 'movie :title title :rating rating))
+       (render #P"movies.html" (list :movies (mito:select-dao 'movie)))))
 
     ;; new movies
-    ((string= "/movies/new" (getf env :request-uri))
-     (render +new-movies.html+))
-    ;; movies
-    ((string= "/theatres" (getf env :request-uri))
-     (render +theatres.html+))
+    ((get-requestp "/movies/new" env)
+     (render #P"new-movies.html"))
+    ;; theatres
+    ((get-requestp "/theatres" env)
+     (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre (mito:includes 'movie)))))
+
+    ;; new theatre
+    ((get-requestp "/theatres/new" env)
+     (render #P"new-theatre.html" (list :movies (mito:select-dao 'movie))))
+
+    ;; create theatre
+    ((post-requestp "/theatres" env)
+     (let* ((parsed (get-parsed env))
+	    (name (get-param "name" parsed))
+	    (movie (get-param "movie" parsed)))
+       (print parsed)
+       (mito:insert-dao (make-instance 'theatre :name name :movie (mito:find-dao 'movie :id (parse-integer movie))))
+       (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre)))))
+
+    ;; edit theatre
+    ((get-requestp "/theatres/edit" env)
+     (print (getf env :query-string))
+     (let ((id (get-query-param "id" (getf env :query-string))))
+       (render #P"edit-theatre.html" (list :theatre (mito:find-dao 'theatre :id id)
+					 :movies (mito:select-dao 'movie)))))
+
+    ;; update theatre
+    ((put-requestp "/theatres" env)
+     (let* ((parsed (get-parsed env))
+	    (name (get-param "name" parsed))
+	    (movie (get-param "movie" parsed)))
+       (print parsed)
+       (mito:insert-dao (make-instance 'theatre :name name :movie (mito:find-dao 'movie :id (parse-integer movie))))
+
+       (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre))))
+    
     ;; home
-    ((string= "/" (getf env :request-uri))
-     (render +index.html+))
+    ((get-requestp "/" env)
+     (render #P"index.html"))
     ;; default route
     (t
-     (render +404.html+))))
+     (render #P"404.html"))))

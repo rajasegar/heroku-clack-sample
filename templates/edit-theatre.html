@@ -1,0 +1,21 @@
+{% extends "layouts/default.html" %}
+{% block title %}Edit Theatre - Heroku Clack sample{% endblock %}
+{% block content %}
+<h1>Edit Theatre</h1>
+<form action="/theatres" method="PUT">
+  <div class="mb-3">
+    <label for="exampleInputEmail1" class="form-label">Name:</label>
+    <input type="text" name="name" class="form-control" id="exampleInputEmail1" aria-describedby="Theatre Name" value="{{theatre.name}}">
+  </div>
+  <div class="mb-3">
+    <label for="exampleInputPassword1" class="form-label">Movie:</label>
+    <select name="movie" class="form-select">
+      {% for movie in movies %}
+      <option value="{{movie.id}}" {% ifequal theatre.movie-id movie.id %}selected="true"{% endifequal %}>{{movie.title}}</option>
+      {% endfor %}
+      </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Update Theatre</button>
+  <a href="/theatres" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

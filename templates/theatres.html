@@ -1,6 +1,28 @@
 {% extends "layouts/default.html" %}
-{% block title %}Home - Heroku Clack sample{% endblock %}
+{% block title %}Theatres - Heroku Clack sample{% endblock %}
 {% block content %}
 <h1>Theatres page</h1>
-<a href="https://github.com/rajasegar">Github</a>
+<a class="btn btn-primary" href="/theatres/new">New Theatre</a>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Movie</th>
+      <th>Edit</th>
+      <th>Delete</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for theatre in theatres %}
+    <tr>
+      <td>{{theatre.name}}</td>
+      <td>{{theatre.movie.title}}</td>
+      <td><a href="/theatres/edit?id={{theatre.id}}">Edit</a></td>
+      <td><a href="/theatres/{{theatre.id}}/delete">Delete</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
 {% endblock %}
