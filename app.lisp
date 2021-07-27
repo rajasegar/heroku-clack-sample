@@ -1,4 +1,4 @@
-(ql:quickload '(:djula :mito :flexi-streams :quri :cl-ppcre))
+(ql:quickload '(:djula :mito :flexi-streams :quri :cl-ppcre :sxql))
 
 (djula:add-template-directory  #P"templates/")
 (defparameter *template-registry* (make-hash-table :test 'equal))
@@ -117,6 +117,13 @@
      (let* ((id (get-id-from-url "^/movies/([0-9]+)$" (getf env :path-info))))
        (mito:delete-by-values 'movie :id id)
        (render #P"_movie-list.html" (list :movies (mito:select-dao 'movie)))))
+
+    ;; POST /movies/search
+    ((post-requestp "^/movies/search$" env)
+     (let* ((parsed (get-parsed env))
+	    (query (get-param "query" parsed))
+	    (movies (mito:select-dao 'movie (sxql:where (:like :title (concatenate 'string "%" query "%"))))))
+       (render #P"_movie-list.html" (list :movies movies))))
 
     ;; theatres
     ((get-requestp "/theatres" env)
