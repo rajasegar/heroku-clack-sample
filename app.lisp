@@ -1,4 +1,4 @@
-(ql:quickload '(:djula :mito :flexi-streams :quri))
+(ql:quickload '(:djula :mito :flexi-streams :quri :cl-ppcre))
 
 (djula:add-template-directory  #P"templates/")
 (defparameter *template-registry* (make-hash-table :test 'equal))
@@ -15,11 +15,17 @@
 	  (,(format nil "~a" (get-output-stream-string html))))))
 
 ;; utils
+;; (defun get-requestp (url env)
+;;   (and (string= url (getf env :path-info)) (equal (getf env :request-method) :get)))
+
 (defun get-requestp (url env)
-  (and (string= url (getf env :path-info)) (equal (getf env :request-method) :get)))
+  (and (cl-ppcre:scan-to-strings (concatenate 'string "^"  url "$") (getf env :path-info)) (equal (getf env :request-method) :get)))
 
 (defun post-requestp (url env)
   (and (string= url (getf env :path-info)) (equal (getf env :request-method) :post)))
+
+(defun put-requestp (url env)
+  (and (string= url (getf env :path-info)) (equal (getf env :request-method) :put)))
 
 (defun get-parsed (env)
   "Get parsed form-encoded values from :raw-body"
@@ -34,6 +40,10 @@
 (defun get-query-param (name querystring)
   "Get query param values from :query-string"
   (cdr (assoc name (quri:url-decode-params querystring) :test #'string=)))
+
+(defun get-id-from-url (regex url)
+  (cl-ppcre:register-groups-bind (id) (regex url)
+    (parse-integer id)))
 
 ;; db
 (mito:connect-toplevel :sqlite3 :database-name #P"movies.db")
@@ -87,6 +97,7 @@
 
     ;; new theatre
     ((get-requestp "/theatres/new" env)
+    ;; ((get-requestp "/theatres/new" env)
      (render #P"new-theatre.html" (list :movies (mito:select-dao 'movie))))
 
     ;; create theatre
@@ -99,9 +110,9 @@
        (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre)))))
 
     ;; edit theatre
-    ((get-requestp "/theatres/edit" env)
-     (print (getf env :query-string))
-     (let ((id (get-query-param "id" (getf env :query-string))))
+    ((get-requestp "/theatres/([0-9]+)/edit" env)
+     ;; (print (getf env :query-string))
+     (let ((id (get-id-from-url "^/theatres/([0-9]+)/edit$" (getf env :path-info))))
        (render #P"edit-theatre.html" (list :theatre (mito:find-dao 'theatre :id id)
 					 :movies (mito:select-dao 'movie)))))
 
@@ -113,7 +124,7 @@
        (print parsed)
        (mito:insert-dao (make-instance 'theatre :name name :movie (mito:find-dao 'movie :id (parse-integer movie))))
 
-       (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre))))
+       (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre)))))
     
     ;; home
     ((get-requestp "/" env)

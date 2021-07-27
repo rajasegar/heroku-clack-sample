@@ -18,7 +18,7 @@
     <tr>
       <td>{{theatre.name}}</td>
       <td>{{theatre.movie.title}}</td>
-      <td><a href="/theatres/edit?id={{theatre.id}}">Edit</a></td>
+      <td><a href="/theatres/{{theatre.id}}/edit?id={{theatre.id}}">Edit</a></td>
       <td><a href="/theatres/{{theatre.id}}/delete">Delete</a></td>
     </tr>
     {% endfor %}
