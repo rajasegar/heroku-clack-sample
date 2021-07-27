@@ -15,17 +15,17 @@
 	  (,(format nil "~a" (get-output-stream-string html))))))
 
 ;; utils
-;; (defun get-requestp (url env)
-;;   (and (string= url (getf env :path-info)) (equal (getf env :request-method) :get)))
-
 (defun get-requestp (url env)
   (and (cl-ppcre:scan-to-strings (concatenate 'string "^"  url "$") (getf env :path-info)) (equal (getf env :request-method) :get)))
 
 (defun post-requestp (url env)
-  (and (string= url (getf env :path-info)) (equal (getf env :request-method) :post)))
+  (and (cl-ppcre:scan-to-strings url (getf env :path-info)) (equal (getf env :request-method) :post)))
 
 (defun put-requestp (url env)
-  (and (string= url (getf env :path-info)) (equal (getf env :request-method) :put)))
+  (and (cl-ppcre:scan-to-strings url (getf env :path-info)) (equal (getf env :request-method) :put)))
+
+(defun delete-requestp (url env)
+  (and (cl-ppcre:scan-to-strings url (getf env :path-info)) (equal (getf env :request-method) :delete)))
 
 (defun get-parsed (env)
   "Get parsed form-encoded values from :raw-body"
@@ -61,10 +61,6 @@
 (mito:ensure-table-exists 'theatre)
 
 ;; (mito:insert-dao (make-instance 'movie :title "Lord of the Rings" :rating 9))
-;; (mito:insert-dao (make-instance 'movie :title "The Matrix" :rating 8))
-;; (mito:insert-dao (make-instance 'movie :title "2012" :rating 8))
-;; (mito:insert-dao (make-instance 'movie :title "Independence Day" :rating 8))
-;; (mito:insert-dao (make-instance 'movie :title "Titanic" :rating 8))
 
 (lambda (env)
   (print env)
@@ -80,17 +76,48 @@
      (render #P"movies.html" (list :movies (mito:select-dao 'movie))))
 
     ;; POST movies
-    ((post-requestp "/movies" env)
+    ((post-requestp "^/movies$" env)
      (let* ((parsed (get-parsed env))
 	    (title (get-param "title" parsed))
 	    (rating (get-param "rating" parsed)))
        (print title)
        (mito:insert-dao (make-instance 'movie :title title :rating rating))
-       (render #P"movies.html" (list :movies (mito:select-dao 'movie)))))
+       '(302 (:location "/movies") nil)))
 
     ;; new movies
     ((get-requestp "/movies/new" env)
      (render #P"new-movies.html"))
+
+    ;; edit movie
+    ((get-requestp "^/movies/([0-9]+)/edit$" env)
+     (let* ((id (get-id-from-url "^/movies/([0-9]+)/edit$" (getf env :path-info)))
+	    (movie (mito:find-dao 'movie :id id)))
+       (render #P"_edit-movie.html" (list :movie movie))))
+
+    ;; update movie
+    ((post-requestp "^/movies/([0-9]+)/update$" env)
+     (let* ((id (get-id-from-url "^/movies/([0-9]+)/update$" (getf env :path-info)))
+	    (movie (mito:find-dao 'movie :id id))
+	    (parsed (get-parsed env))
+	    (title (get-param "title" parsed))
+	    (rating (get-param "rating" parsed)))
+       (setf (slot-value movie 'title) title
+	     (slot-value movie 'rating) rating)
+       (mito:save-dao movie)
+       (render #P"_movie-row.html" (list :movie movie))))
+
+    ;; GET /movies/delete
+    ((get-requestp "^/movies/([0-9]+)/delete$" env)
+     (let* ((id (get-id-from-url "^/movies/([0-9]+)/delete$" (getf env :path-info)))
+	    (movie (mito:find-dao 'movie :id id)))
+       (render #P"_confirm-movie-delete.html" (list :movie movie))))
+    
+    ;; DELETE /movies/:id
+    ((delete-requestp "^/movies/([0-9]+)$" env)
+     (let* ((id (get-id-from-url "^/movies/([0-9]+)$" (getf env :path-info))))
+       (mito:delete-by-values 'movie :id id)
+       (render #P"_movie-list.html" (list :movies (mito:select-dao 'movie)))))
+
     ;; theatres
     ((get-requestp "/theatres" env)
      (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre (mito:includes 'movie)))))
@@ -100,16 +127,16 @@
     ;; ((get-requestp "/theatres/new" env)
      (render #P"new-theatre.html" (list :movies (mito:select-dao 'movie))))
 
-    ;; create theatre
-    ((post-requestp "/theatres" env)
+;; create theatre
+    ((post-requestp "^/theatres$" env)
      (let* ((parsed (get-parsed env))
 	    (name (get-param "name" parsed))
 	    (movie (get-param "movie" parsed)))
        (print parsed)
        (mito:insert-dao (make-instance 'theatre :name name :movie (mito:find-dao 'movie :id (parse-integer movie))))
-       (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre)))))
+       '(302 (:location "/theatres") nil)))
 
-    ;; edit theatre
+        ;; edit theatre
     ((get-requestp "/theatres/([0-9]+)/edit" env)
      ;; (print (getf env :query-string))
      (let ((id (get-id-from-url "^/theatres/([0-9]+)/edit$" (getf env :path-info))))
@@ -117,15 +144,18 @@
 					 :movies (mito:select-dao 'movie)))))
 
     ;; update theatre
-    ((put-requestp "/theatres" env)
-     (let* ((parsed (get-parsed env))
+    ((post-requestp "^/theatres/([0-9]+)/update$" env)
+     (let* ((id (get-id-from-url "^/theatres/([0-9]+)/update$" (getf env :path-info)))
+	    (theatre (mito:find-dao 'theatre :id id))
+	    (parsed (get-parsed env))
 	    (name (get-param "name" parsed))
 	    (movie (get-param "movie" parsed)))
-       (print parsed)
-       (mito:insert-dao (make-instance 'theatre :name name :movie (mito:find-dao 'movie :id (parse-integer movie))))
+       (setf (slot-value theatre 'name) name
+	     (slot-value theatre 'movie) (mito:find-dao 'movie :id movie))
+       (mito:save-dao theatre)
+       '(302 (:location "/theatres") nil)
+     ))
 
-       (render #P"theatres.html" (list :theatres (mito:select-dao 'theatre)))))
-    
     ;; home
     ((get-requestp "/" env)
      (render #P"index.html"))

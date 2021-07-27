@@ -2,7 +2,7 @@
 {% block title %}Edit Theatre - Heroku Clack sample{% endblock %}
 {% block content %}
 <h1>Edit Theatre</h1>
-<form action="/theatres" method="PUT">
+<form action="/theatres/{{theatre.id}}/update" method="POST">
   <div class="mb-3">
     <label for="exampleInputEmail1" class="form-label">Name:</label>
     <input type="text" name="name" class="form-control" id="exampleInputEmail1" aria-describedby="Theatre Name" value="{{theatre.name}}">

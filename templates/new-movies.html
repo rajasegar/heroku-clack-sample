@@ -1,5 +1,5 @@
 {% extends "layouts/default.html" %}
-{% block title %}Home - Heroku Clack sample{% endblock %}
+{% block title %}New Movie - Heroku Clack sample{% endblock %}
 {% block content %}
 <h1>New Movie</h1>
 <form action="/movies" method="POST">
@@ -12,5 +12,6 @@
     <input type="number" name="rating" class="form-control" id="exampleInputPassword1">
   </div>
   <button type="submit" class="btn btn-primary">Submit</button>
+  <a href="/movies" class="btn btn-secondary">Cancel</a>
 </form>
 {% endblock %}

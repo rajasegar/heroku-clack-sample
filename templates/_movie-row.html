@@ -1,0 +1,8 @@
+<tr id="movie-{{movie.id}}" class="bg-info" _="on load wait 2s then remove .bg-info from me">
+<td>{{movie.title}}</td>
+<td>{{movie.rating}}</td>
+<td>
+  <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" hx-get="/movies/{{movie.id}}/edit" hx-target="#offcanvas-body" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">Edit</button>
+</td>
+<td><a href="/movies/{{movie.id}}/delete">Delete</a></td>
+</tr>

@@ -1,0 +1,12 @@
+<form hx-post="/movies/{{movie.id}}/update" hx-target="#movie-{{movie.id}}" hx-swap="outerHTML">
+  <div class="mb-3">
+    <label for="exampleInputEmail1" class="form-label">Title:</label>
+    <input type="text" name="title" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" value="{{movie.title}}">
+  </div>
+  <div class="mb-3">
+    <label for="exampleInputPassword1" class="form-label">Rating</label>
+    <input type="number" name="rating" class="form-control" id="exampleInputPassword1" value="{{movie.rating}}">
+  </div>
+  <button type="submit" data-bs-dismiss="offcanvas" class="btn btn-primary">Update Movie</button>
+  <button type="button" data-bs-dismiss="offcanvas" class="btn btn-secondary">Cancel</button>
+</form>
