@@ -1,8 +1,20 @@
-<tr id="movie-{{movie.id}}" class="bg-info" _="on load wait 2s then remove .bg-info from me">
+<tr id="movie-{{movie.id}}" class="{{bg}}" _="on load wait 2s then remove .{{bg}} from me">
+<td><input name="movies" type="checkbox" value="{{movie.id}}" class="chk-delete" _="on click 
+if my.checked 
+  increment #selectedMovies.value 
+else 
+  decrement #selectedMovies.value 
+end 
+if #selectedMovies.value is not '0' 
+  remove [@disabled] from #bulk-delete 
+else 
+  add [@disabled] to #bulk-delete
+end"/></td>
+
 <td>{{movie.title}}</td>
 <td>{{movie.rating}}</td>
 <td>
   <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" hx-get="/movies/{{movie.id}}/edit" hx-target="#offcanvas-body" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">Edit</button>
 </td>
-<td><a href="/movies/{{movie.id}}/delete">Delete</a></td>
+<td><a href="/movies/{{movie.id}}/delete" class="btn btn-danger">Delete</a></td>
 </tr>

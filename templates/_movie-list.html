@@ -19,10 +19,20 @@ end"></th>
     <th>Delete</th>
   </tr>
 </thead>
-<tbody>
+<tbody id="movie-table-body">
   {% for movie in movies %}
   <tr id="movie-{{movie.id}}">
-      <td><input name="movies" type="checkbox" value="{{movie.id}}" class="chk-delete" _="on click if my.checked increment #selectedMovies.value else decrement #selectedMovies.value end if #selectedMovies.value is not '0' remove [@disabled] from #bulk-delete else add [@disabled] to #bulk-delete"/></td>
+      <td><input name="movies" type="checkbox" value="{{movie.id}}" class="chk-delete" _="on click 
+if my.checked 
+  increment #selectedMovies.value 
+else 
+  decrement #selectedMovies.value 
+end 
+if #selectedMovies.value is not '0' 
+  remove [@disabled] from #bulk-delete 
+else 
+  add [@disabled] to #bulk-delete
+end"/></td>
     <td>{{movie.title}}</td>
     <td>{{movie.rating}}</td>
     <td>

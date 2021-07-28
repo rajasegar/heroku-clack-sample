@@ -79,10 +79,11 @@
     ((post-requestp "^/movies$" env)
      (let* ((parsed (get-parsed env))
 	    (title (get-param "title" parsed))
-	    (rating (get-param "rating" parsed)))
+	    (rating (get-param "rating" parsed))
+	    (new-movie (make-instance 'movie :title title :rating rating)))
        (print title)
-       (mito:insert-dao (make-instance 'movie :title title :rating rating))
-       '(302 (:location "/movies") nil)))
+       (mito:insert-dao new-movie)
+       (render #P"_movie-row.html" (list :movie new-movie :bg "alert-success"))))
 
     ;; new movies
     ((get-requestp "/movies/new" env)
@@ -104,7 +105,7 @@
        (setf (slot-value movie 'title) title
 	     (slot-value movie 'rating) rating)
        (mito:save-dao movie)
-       (render #P"_movie-row.html" (list :movie movie))))
+       (render #P"_movie-row.html" (list :movie movie :bg "alert-info"))))
 
     ;; GET /movies/delete
     ((get-requestp "^/movies/([0-9]+)/delete$" env)

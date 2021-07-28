@@ -13,7 +13,7 @@
   <div class="col-3 mt-3" hx-include="#checked-movies">
     <button id="bulk-delete" class="btn btn-secondary" disabled hx-post="/movies/bulk-delete" hx-target="#movie-list" _="on htmx:afterOnLoad add [@disabled]">Bulk Delete</button>
     <input type="hidden" id="selectedMovies" value="0">
-    <a href="/movies/new" class="btn btn-primary">New Movie</a>
+      <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#ocNewMovie" aria-controls="ocNewMovie">New Movie</button>
   </div>
 </div>
 <form id="checked-movies">
@@ -28,6 +28,27 @@
     <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
   </div>
   <div class="offcanvas-body" id="offcanvas-body">
+  </div>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="ocNewMovie" aria-labelledby="ocNewMovieLabel">
+  <div class="offcanvas-header">
+    <h5 id="ocNewMovielabel">New Movie</h5>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body" id="offcanvas-body">
+<form hx-post="/movies" hx-target="#movie-table-body" hx-swap="afterbegin">
+  <div class="mb-3">
+    <label for="exampleInputEmail1" class="form-label">Title:</label>
+    <input type="text" name="title" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" autofocus>
+  </div>
+  <div class="mb-3">
+    <label for="exampleInputPassword1" class="form-label">Rating</label>
+    <input type="number" name="rating" class="form-control" id="exampleInputPassword1">
+  </div>
+  <button type="submit" data-bs-dismiss="offcanvas" class="btn btn-primary">Add Movie</button>
+  <button type="button" data-bs-dismiss="offcanvas" class="btn btn-secondary">Cancel</button>
+</form>
   </div>
 </div>
 
