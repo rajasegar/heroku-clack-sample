@@ -163,6 +163,14 @@
        '(302 (:location "/theatres") nil)
      ))
 
+    ;; bulk-delete movies
+    ((post-requestp "^/movies/bulk-delete$" env)
+     (let ((parsed (get-parsed env)))
+       (print parsed)
+       (dolist (item parsed)
+	 (mito:delete-by-values 'movie :id (cdr item)))
+       (render #P"_movie-list.html" (list :movies (mito:select-dao 'movie)))))
+
     ;; home
     ((get-requestp "/" env)
      (render #P"index.html"))
